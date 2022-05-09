@@ -9,7 +9,7 @@ import requests
 from reuse import lint
 from reuse.project import Project as ReuseProject
 from scancode.cli import run_scan
-from sqlalchemy import Boolean, Column, DateTime, Enum, Integer, String, desc
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Enum, desc
 from sqlalchemy.orm import Session
 
 from .config import settings
@@ -57,6 +57,9 @@ class Project(Base):
         repo = git.Repo.clone_from(self.url, self.path, depth=1)
         self.__log(db, State.CLONE_END)
         self.hash = repo.head.object.hexsha
+        existing = Project.by_hash(self.url, self.hash, db)
+        if existing:
+            return existing
         self.save(db=db)
 
     def reuse(self, db: Session):
@@ -110,12 +113,14 @@ class Project(Base):
         for (url, param, tag) in blockchains:
             r = requests.post(url, json=data)
             setattr(self, tag, r.json()[param])
-            L.info("Blockchain response to %s: %s", url, r.json())
+            L.debug("Blockchain response to %s: %s", url, r.json())
         self.__log(db, State.BLOCKCHAIN_END)
 
     def scan(self, db: Session):
-        L.info("Scanning project %s", self.url)
-        self.clone(db)
+        L.debug("Scanning project %s", self.url)
+        existing = self.clone(db)
+        if existing:
+            return
         self.reuse(db)
         self.blockchain(db)
         self.scancode(db)
@@ -125,6 +130,10 @@ class Project(Base):
         self.date_last_updated = datetime.utcnow()
         db.merge(self)
         db.commit()
+
+    @classmethod
+    def by_hash(cls, url: str, hash: str, db: Session):
+        return db.query(cls).filter(cls.url == url, cls.hash == hash).first()
 
     @classmethod
     def by_url(cls, url: str, db: Session):
@@ -155,7 +164,7 @@ class AuditLog(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     url = Column(String, index=True)
-    state = Column(Enum(State))
+    state = Column(Enum(State, name="state", native_enum=False))
     output = Column(String, default=None)
     date_created = Column(DateTime, default=datetime.utcnow)
 
