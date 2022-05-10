@@ -1,5 +1,12 @@
 from typing import Optional, Dict, Any
-from pydantic import BaseSettings, HttpUrl, IPvAnyAddress, RedisDsn, PostgresDsn, validator
+from pydantic import (
+    BaseSettings,
+    HttpUrl,
+    IPvAnyAddress,
+    RedisDsn,
+    PostgresDsn,
+    validator,
+)
 
 
 class Settings(BaseSettings):
@@ -8,6 +15,8 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
+    POSTGRES_PORT: str
+    # DATABASE_URL: Optional[str] = "sqlite:///./projects.db"
     DATABASE_URL: Optional[PostgresDsn] = None
 
     @validator("DATABASE_URL", pre=True)
@@ -15,10 +24,11 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v
         return PostgresDsn.build(
-            scheme="postgresql",
+            scheme="postgresql+psycopg2",
             user=values.get("POSTGRES_USER"),
             password=values.get("POSTGRES_PASSWORD"),
             host=values.get("POSTGRES_SERVER"),
+            port=values.get("POSTGRES_PORT"),
             path=f"/{values.get('POSTGRES_DB') or ''}",
         )
 

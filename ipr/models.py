@@ -129,7 +129,7 @@ class Project(Base):
     def save(self, db: Session):
         self.date_last_updated = datetime.utcnow()
         db.merge(self)
-        db.commit()
+        db.flush()
 
     @classmethod
     def by_hash(cls, url: str, hash: str, db: Session):
@@ -152,7 +152,6 @@ class Project(Base):
     def __log(self, db: Session, state: State, output: str = None):
         al = AuditLog(url=self.url, state=state, output=output)
         db.add(al)
-        db.commit()
         db.flush()
 
     def logs(self, db: Session):

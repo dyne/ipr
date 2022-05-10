@@ -14,7 +14,6 @@ from .database import SessionLocal, engine
 from .models import AuditLog, Base, Project
 from .schemas import RepoBase
 
-
 # Base.metadata.create_all(bind=engine, checkfirst=True)
 
 celery = Celery(
@@ -87,7 +86,7 @@ def create_or_update_a_new_repository(
 
 @celery.task
 def scan_task(url):
-    db = SessionLocal()
+    db = next(get_db())
     repo = Project.by_url(url, db)
     repo.scan(db)
 

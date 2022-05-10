@@ -1,16 +1,16 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session
+from sqlalchemy.pool import NullPool
+
 
 from .config import settings
 
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_size=500,
-    pool_use_lifo=True,
-    max_overflow=1000,
+    poolclass=NullPool,
+    isolation_level="AUTOCOMMIT",
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(bind=engine, autocommit=True)
 Base = declarative_base()
